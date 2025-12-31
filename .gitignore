@@ -1,0 +1,26 @@
+# Output files
+jphq.txt
+progress.json
+
+# Large dorks file (use compressed version instead)
+cc_dorks.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
