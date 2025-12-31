@@ -1,1 +1,1 @@
-worker: python parser_railway.py
+web: python parser.py
