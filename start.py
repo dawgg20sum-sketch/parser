@@ -5,6 +5,7 @@ import os
 import sys
 import threading
 import time
+import subprocess
 
 RUN_MODE = os.getenv('RUN_MODE', 'both').lower()
 
@@ -12,8 +13,12 @@ def run_scraper():
     """Run the scraper"""
     print("🔍 Starting dork scraper...")
     try:
-        # Import and execute parser.py
-        exec(open('parser.py').read())
+        # Run parser.py as a subprocess to preserve all imports and environment
+        result = subprocess.run([sys.executable, 'parser.py'], 
+                              env=os.environ.copy(),
+                              capture_output=False)
+        if result.returncode != 0:
+            print(f"Scraper exited with code {result.returncode}")
     except Exception as e:
         print(f"Error running scraper: {e}")
         import traceback
