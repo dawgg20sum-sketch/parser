@@ -65,6 +65,13 @@ engine_choice = os.getenv('SEARCH_ENGINE', '1').strip()
 mode_choice = os.getenv('MODE', '1').strip()
 dorks_file = os.getenv('DORKS_FILE', 'cc_dorks.txt').strip()
 
+# Debug: Print what we're reading from environment
+print("\n🔍 DEBUG: Environment Variables")
+print(f"  PROXY_CHOICE = '{os.getenv('PROXY_CHOICE', 'NOT SET')}'")
+print(f"  SEARCH_ENGINE = '{os.getenv('SEARCH_ENGINE', 'NOT SET')}'")
+print(f"  MODE = '{os.getenv('MODE', 'NOT SET')}'")
+print()
+
 print("=" * 50)
 print("CONFIGURATION")
 print("=" * 50)
