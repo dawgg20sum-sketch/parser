@@ -10,6 +10,7 @@ import random
 import json
 from queue import Queue
 import colorama
+import zipfile
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 colorama.init(autoreset=True)
@@ -33,6 +34,30 @@ persistent_lock = Lock()
 
 saved_urls_set = set()
 saved_urls_lock = Lock()
+
+def extract_dorks_if_needed():
+    """Extract cc_dorks.txt from zip if needed"""
+    dorks_file = "cc_dorks.txt"
+    zip_file = "cc_dorks.zip"
+    
+    if os.path.exists(dorks_file):
+        return True
+    
+    if os.path.exists(zip_file):
+        print(f"Extracting {zip_file}...")
+        try:
+            with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+                zip_ref.extractall('.')
+            print(f"✓ Extracted {dorks_file}")
+            return True
+        except Exception as e:
+            print(f"ERROR extracting zip: {e}")
+            return False
+    
+    return True  # If neither exists, continue (will error later)
+
+# Extract dorks if compressed
+extract_dorks_if_needed()
 
 # Configuration from environment variables
 choice = os.getenv('PROXY_CHOICE', '1').strip()
