@@ -1,1 +1,1 @@
-web: python parser.py
+web: python start.py
