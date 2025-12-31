@@ -5,6 +5,9 @@ progress.json
 # Large dorks file (use compressed version instead)
 cc_dorks.txt
 
+# Environment (contains secrets - use .env.example instead)
+.env
+
 # Python
 __pycache__/
 *.py[cod]
