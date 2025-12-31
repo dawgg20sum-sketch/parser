@@ -10,6 +10,7 @@ import random
 import json
 from queue import Queue
 import colorama
+import zipfile
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 colorama.init(autoreset=True)
@@ -34,86 +35,94 @@ persistent_lock = Lock()
 saved_urls_set = set()
 saved_urls_lock = Lock()
 
-print("=" * 50)
-print("Select proxy option:")
-print("1) Proxyless")
-print("2) With proxy")
-print("=" * 50)
+def extract_dorks_if_needed():
+    """Extract cc_dorks.txt from zip if needed"""
+    dorks_file = "cc_dorks.txt"
+    zip_file = "cc_dorks.zip"
+    
+    if os.path.exists(dorks_file):
+        return True
+    
+    if os.path.exists(zip_file):
+        print(f"Extracting {zip_file}...")
+        try:
+            with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+                zip_ref.extractall('.')
+            print(f"✓ Extracted {dorks_file}")
+            return True
+        except Exception as e:
+            print(f"ERROR extracting zip: {e}")
+            return False
+    
+    return True  # If neither exists, continue (will error later)
 
-choice = input("Enter your choice (1 or 2): ").strip()
+# Extract dorks if compressed
+extract_dorks_if_needed()
+
+# Configuration from environment variables
+choice = os.getenv('PROXY_CHOICE', '1').strip()
+engine_choice = os.getenv('SEARCH_ENGINE', '1').strip()
+mode_choice = os.getenv('MODE', '1').strip()
+dorks_file = os.getenv('DORKS_FILE', 'cc_dorks.txt').strip()
+
+print("=" * 50)
+print("CONFIGURATION")
+print("=" * 50)
 
 proxies = None
 if choice == "2":
-    proxy_string = "43.159.29.246:9999:td-customer-K17667574031427-country-us:K17667574031427"
+    proxy_string = os.getenv('PROXY_STRING', "43.159.29.246:9999:td-customer-K17667574031427-country-us:K17667574031427")
     parts = proxy_string.split(":")
     proxy_host = parts[0]
     proxy_port = parts[1]
     proxy_user = parts[2]
     proxy_pass = parts[3]
     
-
     proxy_url = f"http://{proxy_user}:{proxy_pass}@{proxy_host}:{proxy_port}"
     proxies = {
         'http': proxy_url,
         'https': proxy_url
     }
-    print(f"\nUsing proxy: {proxy_host}:{proxy_port}")
+    print(f"Proxy: {proxy_host}:{proxy_port}")
 else:
-    print("\nRunning without proxy")
+    print("Proxy: None")
 
-print("\n" + "=" * 50)
-print("Select search engine:")
-print("1) Google only")
-print("2) Bing only")
-print("3) Mix (alternating Google and Bing)")
-print("=" * 50)
-engine_choice = input("Enter your choice (1, 2 or 3): ").strip()
+engine_names = {"1": "Google only", "2": "Bing only", "3": "Mix (Google + Bing)"}
+print(f"Search Engine: {engine_names.get(engine_choice, 'Google only')}")
 
-print("\n" + "=" * 50)
-print("Select mode:")
-print("1) Single-threaded (slower but less rate limits)")
-print("2) Multi-threaded (faster but more rate limits)")
-print("=" * 50)
-mode_choice = input("Enter your choice (1 or 2): ").strip()
 single_threaded = mode_choice != "2"
+mode_name = "Single-threaded" if single_threaded else "Multi-threaded"
+print(f"Mode: {mode_name}")
 
 progress_file = "progress.json"
 start_index = 0
 
 if os.path.exists(progress_file):
-    print("\n" + "=" * 50)
-    resume_choice = input("Progress file found. Resume from last position? (y/n): ").strip().lower()
-    print("=" * 50)
-    if resume_choice == 'y':
-        try:
-            with open(progress_file, 'r') as f:
-                progress_data = json.load(f)
-                start_index = progress_data.get('last_completed', 0)
-                print(f"Resuming from dork #{start_index + 1}")
-        except:
-            print("Could not read progress file, starting from beginning")
-            start_index = 0
-
-print("\n" + "=" * 50)
-dorks_file = input("Enter dorks file path: ").strip()
+    try:
+        with open(progress_file, 'r') as f:
+            progress_data = json.load(f)
+            start_index = progress_data.get('last_completed', 0)
+            print(f"Resuming from dork #{start_index + 1}")
+    except:
+        print("Starting from beginning")
+        start_index = 0
 
 if not os.path.exists(dorks_file):
     print(f"Error: File '{dorks_file}' not found!")
     exit(1)
 
-print(f"\nReading dorks from: {dorks_file}")
+print(f"Dorks file: {dorks_file}")
 with open(dorks_file, 'r', encoding='utf-8') as f:
     dorks = [line.strip() for line in f if line.strip()]
 
 print(f"Loaded {len(dorks)} dork(s)")
 
-user_agents_file = r"C:\Users\Nikish\Documents\par3\user_agents.txt"
+# Try to find user_agents.txt in current directory or use default
+user_agents_file = "user_agents.txt"
 if not os.path.exists(user_agents_file):
-    print(f"\nWarning: User agents file not found at {user_agents_file}")
-    print("Using default user agent...")
+    print(f"Warning: User agents file not found, using default")
     user_agents = ['Mozilla/5.0 (iPhone; CPU iPhone OS 18_7_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) GSA/396.0.833910942 Mobile/22H217 Safari/604.1']
 else:
-    print(f"\nReading user agents from: {user_agents_file}")
     with open(user_agents_file, 'r', encoding='utf-8') as f:
         user_agents = [line.strip() for line in f if line.strip()]
     print(f"Loaded {len(user_agents)} user agent(s)")
@@ -122,7 +131,7 @@ output_file = "jphq.txt"
 file_lock = Lock()
 
 if os.path.exists(output_file):
-    print(f"\nLoading existing URLs for duplicate filtering...")
+    print(f"Loading existing URLs for duplicate filtering...")
     try:
         with open(output_file, 'r', encoding='utf-8') as f:
             for line in f:
@@ -132,6 +141,8 @@ if os.path.exists(output_file):
         print(f"Loaded {len(saved_urls_set)} existing URL(s)")
     except Exception as e:
         print(f"Warning: Could not load existing URLs: {e}")
+
+print("=" * 50 + "\n")
 
 base_headers = {
     'Host': 'www.google.com',
@@ -557,13 +568,6 @@ if engine_choice == "2" or engine_choice == "3":
     else:
         print("⚠ Could not get Bing cookies")
 
-if engine_choice == "1":
-    print("\nSearch Engine: Google only")
-elif engine_choice == "2":
-    print("\nSearch Engine: Bing only")
-else:
-    print("\nSearch Engine: Mix (alternating Google and Bing)")
-
 if single_threaded:
     max_workers = 1
     delay_between_requests = 3.0
@@ -573,7 +577,7 @@ else:
     delay_between_requests = 2.0
     print("Mode: Multi-threaded (2 workers, 2s delay)")
 
-print(f"\nPress Ctrl+C to stop (progress will be saved)\n")
+print(f"\n")
 
 try:
     if engine_choice == "1":
@@ -637,7 +641,7 @@ try:
 except KeyboardInterrupt:
     print("\n\n" + "=" * 50)
     print("⚠ Interrupted! Progress saved.")
-    print(f"Resume by running the script again.")
+    print(f"Resume by redeploying.")
     print("=" * 50)
 
 stop_refresher.set()
